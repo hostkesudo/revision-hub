@@ -95,7 +95,7 @@
   <script src="js/security.js"></script>
   <script>
     initTheme();
-    let WORKER_URL = '';
+    let WORKER_URL = 'https://revisionhub-payhero-proxy.server-host-ke-org.workers.dev';
     let currentUser = null;
 
     requireAuth(async user => {
@@ -106,7 +106,7 @@
         getAppConfig(),
         db.collection('users').doc(user.uid).get()
       ]);
-      WORKER_URL = config.workerUrl || '';
+      WORKER_URL = config.workerUrl || WORKER_URL;
 
       const userData = userDoc.data();
       if (userData && (userData.vip || userData.leakages)) {
