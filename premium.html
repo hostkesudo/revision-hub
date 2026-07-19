@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Premium Papers - Revision Hub</title>
+  <title>Leakages - Revision Hub</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
@@ -22,45 +22,66 @@
 
   <div class="page-wrapper">
     <div class="container">
-      <div class="page-header fade-in">
-        <h1>Premium Papers</h1>
-        <p>Unlock premium predicted papers and exclusive study resources</p>
-      </div>
 
-      <div id="vip-notice" class="hidden mb-3">
-        <div class="alert alert-info">
-          <i class="fas fa-crown"></i> You're a VIP member! All premium papers are unlocked for you.
+      <div id="paywall-section" class="hidden">
+        <div class="vip-banner fade-in">
+          <h2><i class="fas fa-lock"></i> CDACC Leakages</h2>
+          <p>Pay once to unlock all leakage papers and predicted materials</p>
+          <div class="vip-features">
+            <div class="vip-feature"><i class="fas fa-check-circle"></i> All Leakages Papers</div>
+            <div class="vip-feature"><i class="fas fa-check-circle"></i> Predicted Papers</div>
+            <div class="vip-feature"><i class="fas fa-check-circle"></i> Level 4, 5 & 6</div>
+            <div class="vip-feature"><i class="fas fa-check-circle"></i> Instant Access</div>
+          </div>
+          <div class="vip-price">KES 20 <small>/ one-time</small></div>
+          <button class="btn btn-primary btn-lg" onclick="openLeakageModal()" style="background: #fff; color: #4338ca; font-size: 1.1rem;">
+            <i class="fas fa-unlock"></i> Unlock Leakages
+          </button>
         </div>
       </div>
 
-      <div class="filter-bar fade-in">
-        <select id="filter-level" onchange="loadPapers()">
-          <option value="">All Levels</option>
-          <option value="4">Level 4</option>
-          <option value="5">Level 5</option>
-          <option value="6">Level 6</option>
-        </select>
-        <select id="filter-month" onchange="loadPapers()">
-          <option value="">All Months</option>
-          <option value="July/August 2026">July/August 2026</option>
-          <option value="Nov/Dec 2026">Nov/Dec 2026</option>
-        </select>
-        <select id="filter-subject" onchange="loadPapers()">
-          <option value="">All Subjects</option>
-        </select>
+      <div id="papers-section" class="hidden">
+        <div class="page-header fade-in">
+          <h1>CDACC Leakages</h1>
+          <p>Access all leakage papers and predicted materials</p>
+        </div>
+
+        <div id="vip-notice" class="hidden mb-3">
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> Leakages access active! Download any paper.
+          </div>
+        </div>
+
+        <div class="filter-bar fade-in">
+          <select id="filter-level" onchange="loadPapers()">
+            <option value="">All Levels</option>
+            <option value="4">Level 4</option>
+            <option value="5">Level 5</option>
+            <option value="6">Level 6</option>
+          </select>
+          <select id="filter-month" onchange="loadPapers()">
+            <option value="">All Months</option>
+            <option value="July/August 2026">July/August 2026</option>
+            <option value="Nov/Dec 2026">Nov/Dec 2026</option>
+          </select>
+          <select id="filter-subject" onchange="loadPapers()">
+            <option value="">All Subjects</option>
+          </select>
+        </div>
+
+        <div class="cards-grid" id="papers-grid">
+          <div class="page-loader"><div class="spinner"></div></div>
+        </div>
       </div>
 
-      <div class="cards-grid" id="papers-grid">
-        <div class="page-loader"><div class="spinner"></div></div>
-      </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="pay-modal">
     <div class="modal">
       <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-      <h2>Unlock Premium Paper</h2>
-      <p id="pay-paper-title"></p>
+      <h2><i class="fas fa-lock" style="color: var(--warning);"></i> Unlock Leakages</h2>
+      <p>Get instant access to all leakage papers</p>
       <div style="text-align: center; margin-bottom: 20px;">
         <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary);">KES 20</div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">One-time payment</div>
@@ -70,7 +91,7 @@
         <input type="tel" id="pay-phone" class="form-control" placeholder="0712345678" required>
       </div>
       <button class="btn btn-success btn-block" id="pay-btn" onclick="processPayment()">
-        <i class="fas fa-mobile-alt"></i> Pay with M-Pesa
+        <i class="fas fa-mobile-alt"></i> Pay KES 20
       </button>
       <div id="pay-status" class="mt-2 text-center" style="font-size: 0.85rem; color: var(--text-muted);"></div>
     </div>
@@ -89,35 +110,122 @@
     initTheme();
     let WORKER_URL = '';
     let currentUser = null;
+    let hasLeakageAccess = false;
     let isVip = false;
-    let selectedPaperId = null;
-    let purchasedPapers = [];
 
     requireAuth(async user => {
       currentUser = user;
       initNavbar(user);
 
-      const [config, userDoc, paymentsSnap] = await Promise.all([
+      const [config, userDoc] = await Promise.all([
         getAppConfig(),
-        db.collection('users').doc(user.uid).get(),
-        db.collection('payments').where('uid', '==', user.uid).where('status', '==', 'completed').get()
+        db.collection('users').doc(user.uid).get()
       ]);
       WORKER_URL = config.workerUrl || '';
 
       const userData = userDoc.data();
       isVip = userData && userData.vip;
+      hasLeakageAccess = isVip || (userData && userData.leakages);
 
-      if (isVip) {
+      if (hasLeakageAccess) {
+        document.getElementById('paywall-section').classList.add('hidden');
+        document.getElementById('papers-section').classList.remove('hidden');
         document.getElementById('vip-notice').classList.remove('hidden');
+        loadPapers();
+      } else {
+        document.getElementById('paywall-section').classList.remove('hidden');
+        document.getElementById('papers-section').classList.add('hidden');
+      }
+    });
+
+    function openLeakageModal() {
+      document.getElementById('pay-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('pay-modal').classList.remove('active');
+    }
+
+    async function processPayment() {
+      const phone = document.getElementById('pay-phone').value.trim();
+      const btn = document.getElementById('pay-btn');
+      const status = document.getElementById('pay-status');
+
+      if (!phone || phone.length < 10) {
+        showToast('Enter a valid phone number', 'error');
+        return;
       }
 
-      paymentsSnap.forEach(doc => {
-        const p = doc.data();
-        if (p.paperId) purchasedPapers.push(p.paperId);
-      });
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Sending STK Push...';
+      status.textContent = 'Check your phone for the M-Pesa prompt...';
 
-      loadPapers();
-    });
+      try {
+        const ref = `RH-${Date.now()}`;
+
+        await db.collection('payments').add({
+          uid: currentUser.uid,
+          type: 'leakages',
+          amount: 20,
+          phone: phone,
+          externalReference: ref,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        const response = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: 20,
+            phone_number: phone,
+            external_reference: ref,
+            customer_name: currentUser.displayName || 'Student'
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          status.textContent = 'STK Push sent! Enter your M-Pesa PIN on your phone...';
+          listenForPayment(ref);
+        } else {
+          status.textContent = result.error || result.message || 'Payment failed. Try again.';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 20';
+        }
+      } catch (err) {
+        status.textContent = 'Error. Check your connection.';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 20';
+      }
+    }
+
+    function listenForPayment(ref) {
+      const btn = document.getElementById('pay-btn');
+      const status = document.getElementById('pay-status');
+
+      const unsub = db.collection('payments')
+        .where('externalReference', '==', ref)
+        .onSnapshot(snap => {
+          snap.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'completed') {
+              unsub();
+              closeModal();
+              showToast('Payment successful! Leakages unlocked.', 'success');
+              setTimeout(() => window.location.reload(), 1500);
+            } else if (data.status === 'failed') {
+              unsub();
+              status.textContent = 'Payment failed or cancelled.';
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 20';
+            }
+          });
+        });
+
+      setTimeout(() => { unsub(); }, 120000);
+    }
 
     async function loadPapers() {
       const grid = document.getElementById('papers-grid');
@@ -152,18 +260,17 @@
       const filtered = subject ? papers.filter(p => p.subject === subject) : papers;
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i><h3>No premium papers yet</h3><p>Check back soon for new premium content.</p></div>';
+        grid.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i><h3>No leakages yet</h3><p>Check back soon for new content.</p></div>';
         return;
       }
 
       let html = '';
       filtered.forEach(p => {
-        const owned = isVip || purchasedPapers.includes(p.id);
         html += `
           <div class="paper-card">
             <div class="paper-card-header">
               <div class="paper-card-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);"><i class="fas fa-star"></i></div>
-              <span class="paper-card-price price-paid">KES ${p.price || 20}</span>
+              <span class="paper-card-price price-free">Unlocked</span>
             </div>
             <div class="paper-card-body">
               <h3>${p.title}</h3>
@@ -174,109 +281,12 @@
               </div>
             </div>
             <div class="paper-card-footer">
-              ${owned
-                ? `<button class="btn btn-success btn-sm" style="flex:1;" onclick="window.open('${p.fileURL}', '_blank')"><i class="fas fa-download"></i> Download</button>`
-                : `<button class="btn btn-warning btn-sm" style="flex:1;" onclick="openPayModal('${p.id}', '${p.title}')"><i class="fas fa-lock"></i> Unlock - KES ${p.price || 20}</button>`
-              }
+              <button class="btn btn-success btn-sm" style="flex:1;" onclick="window.open('${p.fileURL}', '_blank')"><i class="fas fa-download"></i> Download</button>
             </div>
           </div>
         `;
       });
       grid.innerHTML = html;
-    }
-
-    function openPayModal(paperId, title) {
-      selectedPaperId = paperId;
-      document.getElementById('pay-paper-title').textContent = title;
-      document.getElementById('pay-modal').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('pay-modal').classList.remove('active');
-      selectedPaperId = null;
-    }
-
-    async function processPayment() {
-      const phone = document.getElementById('pay-phone').value.trim();
-      const btn = document.getElementById('pay-btn');
-      const status = document.getElementById('pay-status');
-
-      if (!phone || phone.length < 10) {
-        showToast('Enter a valid phone number', 'error');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = '<div class="spinner"></div> Sending STK Push...';
-      status.textContent = 'Check your phone for the M-Pesa prompt...';
-
-      try {
-        const ref = `RH-${Date.now()}`;
-
-        await db.collection('payments').add({
-          uid: currentUser.uid,
-          paperId: selectedPaperId,
-          type: 'paper',
-          amount: 20,
-          phone: phone,
-          externalReference: ref,
-          status: 'pending',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        const response = await fetch(WORKER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: 20,
-            phone_number: phone,
-            external_reference: ref,
-            customer_name: currentUser.displayName || 'Student'
-          })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          status.textContent = 'STK Push sent! Enter your M-Pesa PIN on your phone...';
-          listenForPayment(ref, selectedPaperId);
-        } else {
-          status.textContent = result.error || result.message || 'Payment failed. Try again.';
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay with M-Pesa';
-        }
-      } catch (err) {
-        status.textContent = 'Error. Check your connection and try again.';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay with M-Pesa';
-      }
-    }
-
-    function listenForPayment(ref, paperId) {
-      const btn = document.getElementById('pay-btn');
-      const status = document.getElementById('pay-status');
-
-      const unsub = db.collection('payments')
-        .where('externalReference', '==', ref)
-        .onSnapshot(snap => {
-          snap.forEach(doc => {
-            const data = doc.data();
-            if (data.status === 'completed') {
-              unsub();
-              purchasedPapers.push(paperId);
-              closeModal();
-              showToast('Payment successful! Paper unlocked.', 'success');
-              loadPapers();
-            } else if (data.status === 'failed') {
-              unsub();
-              status.textContent = 'Payment failed or cancelled.';
-              btn.disabled = false;
-              btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay with M-Pesa';
-            }
-          });
-        });
-
-      setTimeout(() => { unsub(); }, 120000);
     }
   </script>
 </body>
