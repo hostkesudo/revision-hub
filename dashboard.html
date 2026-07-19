@@ -78,7 +78,13 @@
 
       document.getElementById('welcome-text').textContent = `Welcome, ${user.displayName || 'Student'}!`;
 
-      const userDoc = await db.collection('users').doc(user.uid).get();
+      const [userDoc, papersSnap, premiumSnap, downloadsSnap] = await Promise.all([
+        db.collection('users').doc(user.uid).get(),
+        db.collection('papers').where('category', '==', 'revision').where('enabled', '==', true).orderBy('uploadedAt', 'desc').limit(6).get(),
+        db.collection('papers').where('category', '==', 'premium').where('enabled', '==', true).get(),
+        db.collection('downloads').where('uid', '==', user.uid).get()
+      ]);
+
       const userData = userDoc.data();
 
       if (userData && userData.vip) {
@@ -98,13 +104,8 @@
         `;
       }
 
-      const papersSnap = await db.collection('papers').where('category', '==', 'revision').where('enabled', '==', true).orderBy('uploadedAt', 'desc').limit(6).get();
       document.getElementById('stat-papers').textContent = papersSnap.size;
-
-      const premiumSnap = await db.collection('papers').where('category', '==', 'premium').where('enabled', '==', true).get();
       document.getElementById('stat-premium').textContent = premiumSnap.size;
-
-      const downloadsSnap = await db.collection('downloads').where('uid', '==', user.uid).get();
       document.getElementById('stat-downloads').textContent = downloadsSnap.size;
 
       const recentContainer = document.getElementById('recent-papers');

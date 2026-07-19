@@ -69,13 +69,14 @@ function requireAuth(callback) {
   });
 }
 
-function requireAdmin(callback) {
-  auth.onAuthStateChanged(user => {
+async function requireAdmin(callback) {
+  auth.onAuthStateChanged(async user => {
     if (!user) {
       window.location.href = '/login.html';
       return;
     }
-    if (!isAdmin(user)) {
+    const admin = await isAdmin(user);
+    if (!admin) {
       window.location.href = '/dashboard.html';
       return;
     }
@@ -83,10 +84,11 @@ function requireAdmin(callback) {
   });
 }
 
-function redirectIfAuth() {
-  auth.onAuthStateChanged(user => {
+async function redirectIfAuth() {
+  auth.onAuthStateChanged(async user => {
     if (user) {
-      if (isAdmin(user)) {
+      const admin = await isAdmin(user);
+      if (admin) {
         window.location.href = '/admin/dashboard.html';
       } else {
         window.location.href = '/dashboard.html';

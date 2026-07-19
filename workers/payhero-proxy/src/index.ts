@@ -7,7 +7,7 @@ interface Env {
 	ALLOWED_ORIGIN?: string;
 }
 
-const callbackStore = new Map<string, { status: string; receivedAt: number }>();
+let cachedToken: { token: string; expiresAt: number } | null = null;
 
 function corsHeaders(origin: string | null, allowedOrigin?: string): Record<string, string> {
 	const allowed = allowedOrigin || "";
@@ -26,6 +26,10 @@ function base64url(str: string): string {
 
 async function getFirebaseToken(sa: any): Promise<string> {
 	const now = Math.floor(Date.now() / 1000);
+	if (cachedToken && cachedToken.expiresAt > now + 60) {
+		return cachedToken.token;
+	}
+
 	const header = { alg: "RS256", typ: "JWT" };
 	const payload = {
 		iss: sa.client_email,
@@ -71,6 +75,8 @@ async function getFirebaseToken(sa: any): Promise<string> {
 
 	const data: any = await resp.json();
 	if (!data.access_token) throw new Error("Token error: " + JSON.stringify(data));
+
+	cachedToken = { token: data.access_token, expiresAt: now + (data.expires_in || 3600) };
 	return data.access_token;
 }
 
@@ -168,11 +174,6 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
 	const payStatus = extractPayStatus(body);
 	const isSuccess = payStatus === "completed" || payStatus === "success";
 
-	callbackStore.set(ref, { status: isSuccess ? "success" : payStatus, receivedAt: Date.now() });
-	if (body.external_reference && body.external_reference !== ref) {
-		callbackStore.set(body.external_reference, { status: isSuccess ? "success" : payStatus, receivedAt: Date.now() });
-	}
-
 	await updateFirestoreFromPayment(env, ref, isSuccess, body.external_reference || null);
 
 	return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -194,14 +195,6 @@ async function verifyPayment(request: Request, env: Env, origin: string | null):
 	}
 
 	try {
-		const cb = callbackStore.get(ref);
-		if (cb && cb.status === "success") {
-			await updateFirestoreFromPayment(env, ref, true);
-			return new Response(JSON.stringify({ status: "success", source: "callback", reference: ref }), {
-				status: 200, headers: { "Content-Type": "application/json", ...headers },
-			});
-		}
-
 		const sa = env.FIREBASE_SERVICE_ACCOUNT;
 		if (sa) {
 			try {
@@ -210,6 +203,11 @@ async function verifyPayment(request: Request, env: Env, origin: string | null):
 				const payDoc = await frGet(token, parsed.project_id, `payments/${encodeURIComponent(ref)}`);
 				if (payDoc.fields?.status?.stringValue === "completed") {
 					return new Response(JSON.stringify({ status: "success", source: "firestore", reference: ref }), {
+						status: 200, headers: { "Content-Type": "application/json", ...headers },
+					});
+				}
+				if (payDoc.fields?.status?.stringValue === "failed") {
+					return new Response(JSON.stringify({ status: "failed", source: "firestore", reference: ref }), {
 						status: 200, headers: { "Content-Type": "application/json", ...headers },
 					});
 				}
@@ -310,7 +308,7 @@ export default {
 				});
 			}
 
-			const callbackOrigin = env.ALLOWED_ORIGIN || origin || "https://YOUR_CLOUDFLARE_PAGES_URL.pages.dev";
+			const callbackOrigin = new URL(request.url).origin;
 
 			const payheroBody = {
 				amount: body.amount,

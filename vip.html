@@ -94,15 +94,20 @@
   <script src="js/app.js"></script>
   <script>
     initTheme();
+    let WORKER_URL = '';
     let currentUser = null;
 
     requireAuth(async user => {
       currentUser = user;
       initNavbar(user);
 
-      const userDoc = await db.collection('users').doc(user.uid).get();
-      const userData = userDoc.data();
+      const [config, userDoc] = await Promise.all([
+        getAppConfig(),
+        db.collection('users').doc(user.uid).get()
+      ]);
+      WORKER_URL = config.workerUrl || '';
 
+      const userData = userDoc.data();
       if (userData && userData.vip) {
         document.getElementById('vip-active-notice').classList.remove('hidden');
         document.getElementById('vip-expiry').textContent = userData.vipExpiry ? formatDate(userData.vipExpiry) : '31 August 2026';
@@ -119,8 +124,6 @@
     function closeModal() {
       document.getElementById('vip-modal').classList.remove('active');
     }
-
-    const WORKER_URL = 'https://revisionhub-payhero-proxy.YOUR_SUBDOMAIN.workers.dev';
 
     async function processVipPayment() {
       const phone = document.getElementById('vip-phone').value.trim();
@@ -139,7 +142,7 @@
       try {
         const ref = `RH-${Date.now()}`;
 
-        const payDoc = await db.collection('payments').add({
+        await db.collection('payments').add({
           uid: currentUser.uid,
           type: 'vip',
           amount: 50,
@@ -148,8 +151,6 @@
           status: 'pending',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
-        await db.collection('payments').doc(payDoc.id).update({ externalReference: ref });
 
         const response = await fetch(WORKER_URL, {
           method: 'POST',
@@ -180,31 +181,29 @@
     }
 
     function listenForVipPayment(ref) {
-      const checkInterval = setInterval(async () => {
-        try {
-          const response = await fetch(`${WORKER_URL}/verify-payment`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: ref })
+      const btn = document.getElementById('vip-pay-btn');
+      const status = document.getElementById('vip-pay-status');
+
+      const unsub = db.collection('payments')
+        .where('externalReference', '==', ref)
+        .onSnapshot(snap => {
+          snap.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'completed') {
+              unsub();
+              closeModal();
+              showToast('VIP Activated! Welcome to Revision Hub VIP.', 'success');
+              setTimeout(() => window.location.reload(), 1500);
+            } else if (data.status === 'failed') {
+              unsub();
+              status.textContent = 'Payment failed or cancelled.';
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 50';
+            }
           });
-          const result = await response.json();
-          const s = (result.status || '').toLowerCase();
+        });
 
-          if (s === 'success' || s === 'completed') {
-            clearInterval(checkInterval);
-            closeModal();
-            showToast('VIP Activated! Welcome to Revision Hub VIP.', 'success');
-            setTimeout(() => window.location.reload(), 1500);
-          } else if (s === 'failed' || s === 'rejected') {
-            clearInterval(checkInterval);
-            document.getElementById('vip-pay-status').textContent = 'Payment failed or cancelled.';
-            document.getElementById('vip-pay-btn').disabled = false;
-            document.getElementById('vip-pay-btn').innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 50';
-          }
-        } catch (err) { }
-      }, 3000);
-
-      setTimeout(() => clearInterval(checkInterval), 120000);
+      setTimeout(() => { unsub(); }, 120000);
     }
   </script>
 </body>

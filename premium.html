@@ -87,6 +87,7 @@
   <script src="js/app.js"></script>
   <script>
     initTheme();
+    let WORKER_URL = '';
     let currentUser = null;
     let isVip = false;
     let selectedPaperId = null;
@@ -96,7 +97,13 @@
       currentUser = user;
       initNavbar(user);
 
-      const userDoc = await db.collection('users').doc(user.uid).get();
+      const [config, userDoc, paymentsSnap] = await Promise.all([
+        getAppConfig(),
+        db.collection('users').doc(user.uid).get(),
+        db.collection('payments').where('uid', '==', user.uid).where('status', '==', 'completed').get()
+      ]);
+      WORKER_URL = config.workerUrl || '';
+
       const userData = userDoc.data();
       isVip = userData && userData.vip;
 
@@ -104,7 +111,6 @@
         document.getElementById('vip-notice').classList.remove('hidden');
       }
 
-      const paymentsSnap = await db.collection('payments').where('uid', '==', user.uid).where('status', '==', 'completed').get();
       paymentsSnap.forEach(doc => {
         const p = doc.data();
         if (p.paperId) purchasedPapers.push(p.paperId);
@@ -190,8 +196,6 @@
       selectedPaperId = null;
     }
 
-    const WORKER_URL = 'https://revisionhub-payhero-proxy.YOUR_SUBDOMAIN.workers.dev';
-
     async function processPayment() {
       const phone = document.getElementById('pay-phone').value.trim();
       const btn = document.getElementById('pay-btn');
@@ -209,7 +213,7 @@
       try {
         const ref = `RH-${Date.now()}`;
 
-        const payDoc = await db.collection('payments').add({
+        await db.collection('payments').add({
           uid: currentUser.uid,
           paperId: selectedPaperId,
           type: 'paper',
@@ -219,8 +223,6 @@
           status: 'pending',
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
-        await db.collection('payments').doc(payDoc.id).update({ externalReference: ref });
 
         const response = await fetch(WORKER_URL, {
           method: 'POST',
@@ -254,32 +256,27 @@
       const btn = document.getElementById('pay-btn');
       const status = document.getElementById('pay-status');
 
-      const checkInterval = setInterval(async () => {
-        try {
-          const response = await fetch(`${WORKER_URL}/verify-payment`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: ref })
+      const unsub = db.collection('payments')
+        .where('externalReference', '==', ref)
+        .onSnapshot(snap => {
+          snap.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'completed') {
+              unsub();
+              purchasedPapers.push(paperId);
+              closeModal();
+              showToast('Payment successful! Paper unlocked.', 'success');
+              loadPapers();
+            } else if (data.status === 'failed') {
+              unsub();
+              status.textContent = 'Payment failed or cancelled.';
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay with M-Pesa';
+            }
           });
-          const result = await response.json();
-          const s = (result.status || '').toLowerCase();
+        });
 
-          if (s === 'success' || s === 'completed') {
-            clearInterval(checkInterval);
-            purchasedPapers.push(paperId);
-            closeModal();
-            showToast('Payment successful! Paper unlocked.', 'success');
-            loadPapers();
-          } else if (s === 'failed' || s === 'rejected') {
-            clearInterval(checkInterval);
-            status.textContent = 'Payment failed or cancelled.';
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay with M-Pesa';
-          }
-        } catch (err) { }
-      }, 3000);
-
-      setTimeout(() => clearInterval(checkInterval), 120000);
+      setTimeout(() => { unsub(); }, 120000);
     }
   </script>
 </body>

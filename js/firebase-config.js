@@ -1,10 +1,10 @@
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyD0JszZui3CNKiaMTz7Ds5EkDh_qtMrUY4",
+  authDomain: "revision-hub-app.firebaseapp.com",
+  projectId: "revision-hub-app",
+  storageBucket: "revision-hub-app.firebasestorage.app",
+  messagingSenderId: "190921621258",
+  appId: "1:190921621258:web:4091d963e7306cec5f04f3"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -13,10 +13,32 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-const ADMIN_EMAIL = "admin@revisionhub.com";
+let _appConfig = null;
+let _adminCache = {};
 
-function isAdmin(user) {
-  return user && user.email === ADMIN_EMAIL;
+async function getAppConfig() {
+  if (_appConfig) return _appConfig;
+  try {
+    const doc = await db.collection('config').doc('app').get();
+    _appConfig = doc.exists ? doc.data() : {};
+  } catch (e) {
+    _appConfig = {};
+  }
+  return _appConfig;
+}
+
+async function isAdmin(user) {
+  if (!user) return false;
+  const uid = user.uid;
+  if (_adminCache[uid] !== undefined) return _adminCache[uid];
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    const admin = doc.exists && doc.data().role === 'admin';
+    _adminCache[uid] = admin;
+    return admin;
+  } catch (e) {
+    return false;
+  }
 }
 
 function showLoading(el) {
