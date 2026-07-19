@@ -26,10 +26,9 @@ function initNavbar(user) {
   if (user) {
     nav.innerHTML = `
       <li><a href="/dashboard.html" class="${pageActive('dashboard')}"><i class="fas fa-home"></i> Dashboard</a></li>
-      <li><a href="/papers.html" class="${pageActive('papers')}"><i class="fas fa-book"></i> Papers</a></li>
-      <li><a href="/premium.html" class="${pageActive('premium')}"><i class="fas fa-star"></i> Premium</a></li>
+      <li><a href="/papers.html" class="${pageActive('papers')}"><i class="fas fa-book"></i> Revision Notes</a></li>
+      <li><a href="/premium.html" class="${pageActive('premium')}"><i class="fas fa-star"></i> Leakages</a></li>
       <li><a href="/vip.html" class="${pageActive('vip')}"><i class="fas fa-crown"></i> VIP</a></li>
-      <li><a href="/downloads.html" class="${pageActive('downloads')}"><i class="fas fa-download"></i> Downloads</a></li>
     `;
   } else {
     nav.innerHTML = `
