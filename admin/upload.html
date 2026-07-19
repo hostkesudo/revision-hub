@@ -30,7 +30,7 @@
             <i class="fas fa-bars"></i>
           </button>
           <h1 style="font-size: 1.5rem; font-weight: 800;">Upload Paper</h1>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Add new revision or premium papers</p>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Add new revision or leakage papers</p>
         </div>
         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
       </div>
@@ -40,56 +40,39 @@
 
         <form id="upload-form" onsubmit="handleUpload(event)">
           <div class="form-group">
-            <label>Title</label>
-            <input type="text" id="title" class="form-control" placeholder="e.g. Networking Unit 1" required>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div class="form-group">
-              <label>Category</label>
-              <select id="category" class="form-control" required>
-                <option value="revision">Revision Paper</option>
-                <option value="premium">Premium Paper</option>
-                <option value="notes">Notes</option>
-                <option value="marking">Marking Scheme</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Level</label>
-              <select id="level" class="form-control" required>
-                <option value="4">Level 4</option>
-                <option value="5">Level 5</option>
-                <option value="6">Level 6</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <div class="form-group">
-              <label>Subject</label>
-              <input type="text" id="subject" class="form-control" placeholder="e.g. Mathematics" required>
-            </div>
-            <div class="form-group">
-              <label>Month</label>
-              <select id="month" class="form-control" required>
-                <option value="July/August 2026">July/August 2026</option>
-                <option value="Nov/Dec 2026">Nov/Dec 2026</option>
-              </select>
+            <label>Type</label>
+            <div style="display: flex; gap: 12px;">
+              <label style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s;" class="type-option" data-value="revision">
+                <input type="radio" name="type" value="revision" checked style="display: none;">
+                <div class="stat-icon blue" style="width: 36px; height: 36px; font-size: 0.9rem;"><i class="fas fa-book"></i></div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem;">Revision</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">Free access</div>
+                </div>
+              </label>
+              <label style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s;" class="type-option" data-value="premium">
+                <input type="radio" name="type" value="premium" style="display: none;">
+                <div class="stat-icon yellow" style="width: 36px; height: 36px; font-size: 0.9rem;"><i class="fas fa-star"></i></div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem;">Leakages</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">Paid access</div>
+                </div>
+              </label>
             </div>
           </div>
 
           <div class="form-group">
-            <label>Price (KES) - 0 for free</label>
-            <input type="number" id="price" class="form-control" value="0" min="0" required>
+            <label>File Name (used as title)</label>
+            <input type="text" id="title" class="form-control" placeholder="e.g. Networking Unit 1">
           </div>
 
           <div class="form-group">
-            <label>Upload PDF</label>
+            <label>Upload File</label>
             <input type="file" id="file" class="form-control" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg" required style="padding: 10px;">
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="upload-btn">
-            <span id="upload-text"><i class="fas fa-cloud-upload-alt"></i> Upload Paper</span>
+            <span id="upload-text"><i class="fas fa-cloud-upload-alt"></i> Upload</span>
             <div class="spinner hidden" id="upload-spinner"></div>
           </button>
         </form>
@@ -106,6 +89,19 @@
   <script>
     initTheme();
     requireAdmin(() => {});
+
+    document.querySelectorAll('.type-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.type-option').forEach(o => {
+          o.style.borderColor = 'var(--border)';
+          o.style.background = 'transparent';
+        });
+        opt.style.borderColor = 'var(--primary)';
+        opt.style.background = 'rgba(79, 70, 229, 0.05)';
+        opt.querySelector('input').checked = true;
+      });
+    });
+    document.querySelector('.type-option[data-value="revision"]').click();
 
     async function handleUpload(e) {
       e.preventDefault();
@@ -132,21 +128,20 @@
         await ref.put(file);
         const fileURL = await ref.getDownloadURL();
 
-        const title = document.getElementById('title').value.trim();
-        const category = document.getElementById('category').value;
-        const level = document.getElementById('level').value;
-        const subject = document.getElementById('subject').value.trim();
-        const month = document.getElementById('month').value;
-        const price = parseInt(document.getElementById('price').value) || 0;
+        const category = document.querySelector('input[name="type"]:checked').value;
+        let title = document.getElementById('title').value.trim();
+        if (!title) title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
 
         await db.collection('papers').add({
-          title, category, level, subject, month, price, fileURL,
-          enabled: true,
+          title, category, level: '4', subject: 'General', month: 'July/August 2026',
+          price: category === 'premium' ? 20 : 0,
+          fileURL, enabled: true,
           uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        alertBox.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Paper uploaded successfully!</div>';
+        alertBox.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Uploaded successfully!</div>';
         document.getElementById('upload-form').reset();
+        document.querySelector('.type-option[data-value="revision"]').click();
       } catch (err) {
         alertBox.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Upload failed: ${err.message}</div>`;
       } finally {
