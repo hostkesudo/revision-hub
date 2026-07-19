@@ -1,0 +1,18 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "/workers/**",
+      "/node_modules/**",
+      "/.git/**",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "README.md"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "revisionhub-payhero-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://YOUR_CLOUDFLARE_PAGES_URL.pages.dev"
+  }
+  // Required secrets (set via `wrangler secret put`):
+  // - PAYHERO_API_TOKEN: PayHero Basic auth token
+  // - PAYHERO_CHANNEL_ID: PayHero channel ID
+  // - FIREBASE_SERVICE_ACCOUNT: JSON string of Firebase service account
+  // - ALLOWED_ORIGIN: Your Cloudflare Pages URL
+}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Revision Hub</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar">
+      <a href="/" class="brand">
+        <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+        <span>Revision Hub</span>
+      </a>
+      <nav>
+        <a href="/admin/dashboard.html" class="active"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="/admin/upload.html"><i class="fas fa-cloud-upload-alt"></i> Upload Paper</a>
+        <a href="/admin/papers.html"><i class="fas fa-book"></i> Manage Papers</a>
+        <a href="/admin/students.html"><i class="fas fa-users"></i> Students</a>
+        <a href="/admin/payments.html"><i class="fas fa-money-bill-wave"></i> Payments</a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+        <div>
+          <button class="sidebar-toggle" id="sidebar-toggle" onclick="document.getElementById('admin-sidebar').classList.toggle('open')">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 style="font-size: 1.5rem; font-weight: 800;">Admin Dashboard</h1>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Overview of your platform</p>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
+          <button class="btn btn-danger btn-sm" onclick="auth.signOut().then(()=>window.location.href='/')"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+          <div class="stat-value" id="stat-students">-</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-book"></i></div>
+          <div class="stat-value" id="stat-papers">-</div>
+          <div class="stat-label">Total Papers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow"><i class="fas fa-money-bill-wave"></i></div>
+          <div class="stat-value" id="stat-revenue">-</div>
+          <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon cyan"><i class="fas fa-crown"></i></div>
+          <div class="stat-value" id="stat-vip">-</div>
+          <div class="stat-label">VIP Members</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="card-solid">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 16px;"><i class="fas fa-clock"></i> Recent Payments</h3>
+          <div id="recent-payments"><div class="page-loader"><div class="spinner"></div></div></div>
+        </div>
+        <div class="card-solid">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 16px;"><i class="fas fa-user-plus"></i> Recent Students</h3>
+          <div id="recent-students"><div class="page-loader"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    initTheme();
+    requireAdmin(async user => {
+      const [studentsSnap, papersSnap, paymentsSnap, vipSnap] = await Promise.all([
+        db.collection('users').where('role', '==', 'student').get(),
+        db.collection('papers').get(),
+        db.collection('payments').where('status', '==', 'completed').get(),
+        db.collection('users').where('vip', '==', true).get()
+      ]);
+
+      document.getElementById('stat-students').textContent = studentsSnap.size;
+      document.getElementById('stat-papers').textContent = papersSnap.size;
+      document.getElementById('stat-vip').textContent = vipSnap.size;
+
+      let totalRevenue = 0;
+      paymentsSnap.forEach(doc => { totalRevenue += doc.data().amount || 0; });
+      document.getElementById('stat-revenue').textContent = formatCurrency(totalRevenue);
+
+      const recentPayments = document.getElementById('recent-payments');
+      if (paymentsSnap.empty) {
+        recentPayments.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">No payments yet.</p>';
+      } else {
+        let html = '';
+        let count = 0;
+        paymentsSnap.forEach(doc => {
+          if (count >= 5) return;
+          const p = doc.data();
+          html += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;">
+            <span>${p.phone || 'N/A'}</span>
+            <span style="font-weight: 700; color: var(--success);">${formatCurrency(p.amount)}</span>
+          </div>`;
+          count++;
+        });
+        recentPayments.innerHTML = html;
+      }
+
+      const recentStudents = document.getElementById('recent-students');
+      let sHtml = '';
+      let sCount = 0;
+      studentsSnap.forEach(doc => {
+        if (sCount >= 5) return;
+        const s = doc.data();
+        sHtml += `<div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;">
+          <span>${s.name || 'Unknown'}</span>
+          <span class="badge ${s.vip ? 'badge-purple' : 'badge-info'}">${s.vip ? 'VIP' : 'Student'}</span>
+        </div>`;
+        sCount++;
+      });
+      recentStudents.innerHTML = sHtml || '<p style="color: var(--text-muted); font-size: 0.85rem;">No students yet.</p>';
+    });
+  </script>
+</body>
+</html>

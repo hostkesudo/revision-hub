@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revision Hub - Prepare Better</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+      Revision Hub
+    </a>
+    <ul class="navbar-nav" id="navbar-links"></ul>
+    <div class="navbar-actions">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
+      <a href="/register.html" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-content fade-in">
+      <div class="hero-badge"><i class="fas fa-graduation-cap"></i> KNEC Certified Materials</div>
+      <h1>Prepare Better.<br><span class="gradient-text">Score Higher.</span></h1>
+      <p>Access revision papers, notes, marking schemes, and premium study resources for KASNEB students. Levels 4, 5, and 6 covered.</p>
+      <div class="hero-actions">
+        <a href="/register.html" class="btn btn-primary btn-lg"><i class="fas fa-rocket"></i> Start Revising</a>
+        <a href="/papers.html" class="btn btn-secondary btn-lg"><i class="fas fa-book"></i> Browse Papers</a>
+      </div>
+      <div class="hero-features">
+        <div class="hero-feature"><i class="fas fa-check-circle"></i> Level 4, 5 & 6</div>
+        <div class="hero-feature"><i class="fas fa-check-circle"></i> Revision Papers</div>
+        <div class="hero-feature"><i class="fas fa-check-circle"></i> Notes & Schemes</div>
+        <div class="hero-feature"><i class="fas fa-check-circle"></i> Premium Content</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="cards-grid" style="margin-bottom: 48px;">
+      <div class="card slide-up" style="text-align: center; padding: 40px 24px;">
+        <div class="stat-icon blue" style="margin: 0 auto 16px; width: 56px; height: 56px; font-size: 1.4rem;">
+          <i class="fas fa-book"></i>
+        </div>
+        <h3 style="margin-bottom: 8px;">Revision Papers</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Access past papers and revision materials organized by level and subject.</p>
+      </div>
+      <div class="card slide-up" style="text-align: center; padding: 40px 24px;">
+        <div class="stat-icon cyan" style="margin: 0 auto 16px; width: 56px; height: 56px; font-size: 1.4rem;">
+          <i class="fas fa-star"></i>
+        </div>
+        <h3 style="margin-bottom: 8px;">Premium Papers</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Unlock premium predicted papers and exclusive study resources.</p>
+      </div>
+      <div class="card slide-up" style="text-align: center; padding: 40px 24px;">
+        <div class="stat-icon green" style="margin: 0 auto 16px; width: 56px; height: 56px; font-size: 1.4rem;">
+          <i class="fas fa-crown"></i>
+        </div>
+        <h3 style="margin-bottom: 8px;">VIP Membership</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Get unlimited access to all premium content with a VIP subscription.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 Revision Hub. All rights reserved.</p>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initTheme();
+    auth.onAuthStateChanged(user => initNavbar(user));
+  </script>
+</body>
+</html>

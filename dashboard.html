@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Revision Hub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+      Revision Hub
+    </a>
+    <ul class="navbar-nav" id="navbar-links"></ul>
+    <div class="navbar-actions">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
+      <a href="/profile.html" class="btn btn-secondary btn-sm" id="user-btn"><i class="fas fa-user"></i></a>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <div class="page-header fade-in">
+        <h1 id="welcome-text">Welcome back!</h1>
+        <p>What would you like to study today?</p>
+      </div>
+
+      <div class="dash-grid fade-in" id="stats-grid">
+        <a href="/papers.html" class="stat-card" style="text-decoration:none; color:inherit;">
+          <div class="stat-icon blue"><i class="fas fa-book"></i></div>
+          <div class="stat-value" id="stat-papers">-</div>
+          <div class="stat-label">Revision Papers</div>
+        </a>
+        <a href="/premium.html" class="stat-card" style="text-decoration:none; color:inherit;">
+          <div class="stat-icon yellow"><i class="fas fa-star"></i></div>
+          <div class="stat-value" id="stat-premium">-</div>
+          <div class="stat-label">Premium Papers</div>
+        </a>
+        <a href="/downloads.html" class="stat-card" style="text-decoration:none; color:inherit;">
+          <div class="stat-icon green"><i class="fas fa-download"></i></div>
+          <div class="stat-value" id="stat-downloads">0</div>
+          <div class="stat-label">My Downloads</div>
+        </a>
+        <div class="stat-card" id="vip-card" style="text-decoration:none; color:inherit;">
+          <div class="stat-icon cyan"><i class="fas fa-crown"></i></div>
+          <div class="stat-value" id="stat-vip">No</div>
+          <div class="stat-label">VIP Status</div>
+        </div>
+      </div>
+
+      <div class="page-header mt-4">
+        <h1 style="font-size: 1.3rem;">Recent Papers</h1>
+      </div>
+
+      <div class="cards-grid" id="recent-papers">
+        <div class="page-loader"><div class="spinner"></div></div>
+      </div>
+
+      <div id="vip-banner-container" class="mt-4 hidden"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 Revision Hub. All rights reserved.</p>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initTheme();
+    requireAuth(async (user) => {
+      initNavbar(user);
+
+      document.getElementById('welcome-text').textContent = `Welcome, ${user.displayName || 'Student'}!`;
+
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      const userData = userDoc.data();
+
+      if (userData && userData.vip) {
+        document.getElementById('stat-vip').textContent = 'Active';
+        document.getElementById('vip-card').querySelector('.stat-icon').style.background = 'rgba(168, 85, 247, 0.1)';
+        document.getElementById('vip-card').querySelector('.stat-icon').style.color = '#a855f7';
+      }
+
+      if (!userData || !userData.vip) {
+        document.getElementById('vip-banner-container').classList.remove('hidden');
+        document.getElementById('vip-banner-container').innerHTML = `
+          <div class="vip-banner">
+            <h2><i class="fas fa-crown"></i> Become a VIP Member</h2>
+            <p>Get unlimited access to all premium papers, notes, and marking schemes.</p>
+            <a href="/vip.html" class="btn btn-primary btn-lg" style="background: #fff; color: #4338ca;"><i class="fas fa-crown"></i> Join VIP - KES 50</a>
+          </div>
+        `;
+      }
+
+      const papersSnap = await db.collection('papers').where('category', '==', 'revision').where('enabled', '==', true).orderBy('uploadedAt', 'desc').limit(6).get();
+      document.getElementById('stat-papers').textContent = papersSnap.size;
+
+      const premiumSnap = await db.collection('papers').where('category', '==', 'premium').where('enabled', '==', true).get();
+      document.getElementById('stat-premium').textContent = premiumSnap.size;
+
+      const downloadsSnap = await db.collection('downloads').where('uid', '==', user.uid).get();
+      document.getElementById('stat-downloads').textContent = downloadsSnap.size;
+
+      const recentContainer = document.getElementById('recent-papers');
+      if (papersSnap.empty) {
+        recentContainer.innerHTML = '<div class="empty-state"><i class="fas fa-book-open"></i><h3>No papers yet</h3><p>Papers will appear here once uploaded.</p></div>';
+        return;
+      }
+
+      let html = '';
+      papersSnap.forEach(doc => {
+        const p = doc.data();
+        html += `
+          <div class="paper-card">
+            <div class="paper-card-header">
+              <div class="paper-card-icon"><i class="fas fa-file-pdf"></i></div>
+              <span class="paper-card-price price-free">Free</span>
+            </div>
+            <div class="paper-card-body">
+              <h3>${p.title}</h3>
+              <div class="paper-card-meta">
+                <span><i class="fas fa-layer-group"></i> Level ${p.level}</span>
+                <span><i class="fas fa-book"></i> ${p.subject}</span>
+                <span><i class="fas fa-calendar"></i> ${p.month}</span>
+              </div>
+            </div>
+            <div class="paper-card-footer">
+              <a href="/papers.html" class="btn btn-primary btn-sm" style="flex:1;"><i class="fas fa-eye"></i> View</a>
+            </div>
+          </div>
+        `;
+      });
+      recentContainer.innerHTML = html;
+    });
+  </script>
+</body>
+</html>

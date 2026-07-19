@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP Membership - Revision Hub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+      Revision Hub
+    </a>
+    <ul class="navbar-nav" id="navbar-links"></ul>
+    <div class="navbar-actions">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
+      <a href="/profile.html" class="btn btn-secondary btn-sm"><i class="fas fa-user"></i></a>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <div id="vip-active-notice" class="hidden mb-3">
+        <div class="alert alert-success">
+          <i class="fas fa-crown"></i> You're a VIP member! Expires: <strong id="vip-expiry"></strong>
+        </div>
+      </div>
+
+      <div class="vip-banner fade-in">
+        <h2><i class="fas fa-crown"></i> VIP Membership</h2>
+        <p>Unlock everything on Revision Hub with a single payment</p>
+        <div class="vip-features">
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> All Premium Papers</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Predicted Papers</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Marking Schemes</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Study Notes</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Unlimited Downloads</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Priority Access</div>
+        </div>
+        <div class="vip-price">KES 50 <small>/ one-time</small></div>
+        <button class="btn btn-primary btn-lg" id="join-btn" onclick="openVipModal()" style="background: #fff; color: #4338ca; font-size: 1.1rem;">
+          <i class="fas fa-crown"></i> Join VIP Now
+        </button>
+      </div>
+
+      <div class="container-md mt-4">
+        <h2 style="font-weight: 800; margin-bottom: 20px;">Frequently Asked Questions</h2>
+        <div class="card mb-2">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">How long does VIP last?</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">VIP access is valid until 31 August 2026. After that, you can renew for the next exam period.</p>
+        </div>
+        <div class="card mb-2">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">What payment methods are accepted?</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">We accept M-Pesa payments via STK Push. Simply enter your phone number and approve the prompt.</p>
+        </div>
+        <div class="card mb-2">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">Can I get a refund?</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">All sales are final. However, if you experience any issues, contact our support team.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="vip-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      <h2><i class="fas fa-crown" style="color: var(--warning);"></i> Join VIP</h2>
+      <p>Get unlimited access to all premium content</p>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary);">KES 50</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Valid until 31 August 2026</div>
+      </div>
+      <div class="form-group">
+        <label>M-Pesa Phone Number</label>
+        <input type="tel" id="vip-phone" class="form-control" placeholder="0712345678" required>
+      </div>
+      <button class="btn btn-success btn-block" id="vip-pay-btn" onclick="processVipPayment()">
+        <i class="fas fa-mobile-alt"></i> Pay KES 50
+      </button>
+      <div id="vip-pay-status" class="mt-2 text-center" style="font-size: 0.85rem; color: var(--text-muted);"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 Revision Hub. All rights reserved.</p>
+  </footer>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    initTheme();
+    let currentUser = null;
+
+    requireAuth(async user => {
+      currentUser = user;
+      initNavbar(user);
+
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      const userData = userDoc.data();
+
+      if (userData && userData.vip) {
+        document.getElementById('vip-active-notice').classList.remove('hidden');
+        document.getElementById('vip-expiry').textContent = userData.vipExpiry ? formatDate(userData.vipExpiry) : '31 August 2026';
+        document.getElementById('join-btn').textContent = 'VIP Active';
+        document.getElementById('join-btn').disabled = true;
+        document.getElementById('join-btn').style.opacity = '0.7';
+      }
+    });
+
+    function openVipModal() {
+      document.getElementById('vip-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('vip-modal').classList.remove('active');
+    }
+
+    const WORKER_URL = 'https://revisionhub-payhero-proxy.YOUR_SUBDOMAIN.workers.dev';
+
+    async function processVipPayment() {
+      const phone = document.getElementById('vip-phone').value.trim();
+      const btn = document.getElementById('vip-pay-btn');
+      const status = document.getElementById('vip-pay-status');
+
+      if (!phone || phone.length < 10) {
+        showToast('Enter a valid phone number', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Sending STK Push...';
+      status.textContent = 'Check your phone for the M-Pesa prompt...';
+
+      try {
+        const ref = `RH-${Date.now()}`;
+
+        const payDoc = await db.collection('payments').add({
+          uid: currentUser.uid,
+          type: 'vip',
+          amount: 50,
+          phone: phone,
+          externalReference: ref,
+          status: 'pending',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await db.collection('payments').doc(payDoc.id).update({ externalReference: ref });
+
+        const response = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: 50,
+            phone_number: phone,
+            external_reference: ref,
+            customer_name: currentUser.displayName || 'Student'
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          status.textContent = 'STK Push sent! Enter your M-Pesa PIN on your phone...';
+          listenForVipPayment(ref);
+        } else {
+          status.textContent = result.error || result.message || 'Payment failed. Try again.';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 50';
+        }
+      } catch (err) {
+        status.textContent = 'Error. Check your connection.';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 50';
+      }
+    }
+
+    function listenForVipPayment(ref) {
+      const checkInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${WORKER_URL}/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reference: ref })
+          });
+          const result = await response.json();
+          const s = (result.status || '').toLowerCase();
+
+          if (s === 'success' || s === 'completed') {
+            clearInterval(checkInterval);
+            closeModal();
+            showToast('VIP Activated! Welcome to Revision Hub VIP.', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+          } else if (s === 'failed' || s === 'rejected') {
+            clearInterval(checkInterval);
+            document.getElementById('vip-pay-status').textContent = 'Payment failed or cancelled.';
+            document.getElementById('vip-pay-btn').disabled = false;
+            document.getElementById('vip-pay-btn').innerHTML = '<i class="fas fa-mobile-alt"></i> Pay KES 50';
+          }
+        } catch (err) { }
+      }, 3000);
+
+      setTimeout(() => clearInterval(checkInterval), 120000);
+    }
+  </script>
+</body>
+</html>

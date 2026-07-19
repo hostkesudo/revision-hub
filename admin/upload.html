@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Paper - Revision Hub</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="admin-sidebar">
+      <a href="/" class="brand">
+        <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+        <span>Revision Hub</span>
+      </a>
+      <nav>
+        <a href="/admin/dashboard.html"><i class="fas fa-home"></i> Dashboard</a>
+        <a href="/admin/upload.html" class="active"><i class="fas fa-cloud-upload-alt"></i> Upload Paper</a>
+        <a href="/admin/papers.html"><i class="fas fa-book"></i> Manage Papers</a>
+        <a href="/admin/students.html"><i class="fas fa-users"></i> Students</a>
+        <a href="/admin/payments.html"><i class="fas fa-money-bill-wave"></i> Payments</a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+        <div>
+          <button class="sidebar-toggle" id="sidebar-toggle" onclick="document.getElementById('admin-sidebar').classList.toggle('open')">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1 style="font-size: 1.5rem; font-weight: 800;">Upload Paper</h1>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Add new revision or premium papers</p>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()"></button>
+      </div>
+
+      <div class="card-solid" style="max-width: 640px;">
+        <div id="alert-box"></div>
+
+        <form id="upload-form" onsubmit="handleUpload(event)">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="title" class="form-control" placeholder="e.g. Networking Unit 1" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>Category</label>
+              <select id="category" class="form-control" required>
+                <option value="revision">Revision Paper</option>
+                <option value="premium">Premium Paper</option>
+                <option value="notes">Notes</option>
+                <option value="marking">Marking Scheme</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Level</label>
+              <select id="level" class="form-control" required>
+                <option value="4">Level 4</option>
+                <option value="5">Level 5</option>
+                <option value="6">Level 6</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>Subject</label>
+              <input type="text" id="subject" class="form-control" placeholder="e.g. Mathematics" required>
+            </div>
+            <div class="form-group">
+              <label>Month</label>
+              <select id="month" class="form-control" required>
+                <option value="July/August 2026">July/August 2026</option>
+                <option value="Nov/Dec 2026">Nov/Dec 2026</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Price (KES) - 0 for free</label>
+            <input type="number" id="price" class="form-control" value="0" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label>Upload PDF</label>
+            <input type="file" id="file" class="form-control" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg" required style="padding: 10px;">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="upload-btn">
+            <span id="upload-text"><i class="fas fa-cloud-upload-alt"></i> Upload Paper</span>
+            <div class="spinner hidden" id="upload-spinner"></div>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    initTheme();
+    requireAdmin(() => {});
+
+    async function handleUpload(e) {
+      e.preventDefault();
+      const btn = document.getElementById('upload-btn');
+      const text = document.getElementById('upload-text');
+      const spinner = document.getElementById('upload-spinner');
+      const alertBox = document.getElementById('alert-box');
+      const fileInput = document.getElementById('file');
+
+      if (!fileInput.files.length) {
+        alertBox.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Please select a file.</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      text.classList.add('hidden');
+      spinner.classList.remove('hidden');
+      alertBox.innerHTML = '';
+
+      try {
+        const file = fileInput.files[0];
+        const filePath = `papers/${Date.now()}_${file.name}`;
+        const ref = storage.ref(filePath);
+        await ref.put(file);
+        const fileURL = await ref.getDownloadURL();
+
+        const title = document.getElementById('title').value.trim();
+        const category = document.getElementById('category').value;
+        const level = document.getElementById('level').value;
+        const subject = document.getElementById('subject').value.trim();
+        const month = document.getElementById('month').value;
+        const price = parseInt(document.getElementById('price').value) || 0;
+
+        await db.collection('papers').add({
+          title, category, level, subject, month, price, fileURL,
+          enabled: true,
+          uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alertBox.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Paper uploaded successfully!</div>';
+        document.getElementById('upload-form').reset();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Upload failed: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        text.classList.remove('hidden');
+        spinner.classList.add('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+workers/payhero-proxy/node_modules/
+service-account.json
+.vscode/
+.git/
+.firebase/
+*.log
