@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VIP Membership - Revision Hub</title>
+  <title>Leakages - Revision Hub</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
@@ -24,32 +24,32 @@
     <div class="container">
       <div id="vip-active-notice" class="hidden mb-3">
         <div class="alert alert-success">
-          <i class="fas fa-crown"></i> You're a VIP member! Expires: <strong id="vip-expiry"></strong>
+          <i class="fas fa-check-circle"></i> Leakages access active! Expires: <strong id="vip-expiry"></strong>
         </div>
       </div>
 
       <div class="vip-banner fade-in">
-        <h2><i class="fas fa-crown"></i> VIP Membership</h2>
-        <p>Unlock everything on Revision Hub with a single payment</p>
+        <h2><i class="fas fa-star"></i> CDACC Leakages</h2>
+        <p>Unlock all leakage papers and revision materials with a single payment</p>
         <div class="vip-features">
-          <div class="vip-feature"><i class="fas fa-check-circle"></i> All Premium Papers</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> All Leakages Papers</div>
           <div class="vip-feature"><i class="fas fa-check-circle"></i> Predicted Papers</div>
-          <div class="vip-feature"><i class="fas fa-check-circle"></i> Marking Schemes</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Level 4, 5 & 6</div>
           <div class="vip-feature"><i class="fas fa-check-circle"></i> Study Notes</div>
           <div class="vip-feature"><i class="fas fa-check-circle"></i> Unlimited Downloads</div>
-          <div class="vip-feature"><i class="fas fa-check-circle"></i> Priority Access</div>
+          <div class="vip-feature"><i class="fas fa-check-circle"></i> Instant Access</div>
         </div>
         <div class="vip-price">KES 50 <small>/ one-time</small></div>
-        <button class="btn btn-primary btn-lg" id="join-btn" onclick="openVipModal()" style="background: #fff; color: #4338ca; font-size: 1.1rem;">
-          <i class="fas fa-crown"></i> Join VIP Now
+        <button class="btn btn-primary btn-lg" id="join-btn" onclick="openLeakageModal()" style="background: #fff; color: #4338ca; font-size: 1.1rem;">
+          <i class="fas fa-unlock"></i> Unlock Leakages
         </button>
       </div>
 
       <div class="container-md mt-4">
         <h2 style="font-weight: 800; margin-bottom: 20px;">Frequently Asked Questions</h2>
         <div class="card mb-2">
-          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">How long does VIP last?</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">VIP access is valid until 31 August 2026. After that, you can renew for the next exam period.</p>
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">How long does access last?</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Access is valid until 31 August 2026. After that, you can renew for the next exam period.</p>
         </div>
         <div class="card mb-2">
           <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">What payment methods are accepted?</h3>
@@ -66,8 +66,8 @@
   <div class="modal-overlay" id="vip-modal">
     <div class="modal">
       <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-      <h2><i class="fas fa-crown" style="color: var(--warning);"></i> Join VIP</h2>
-      <p>Get unlimited access to all premium content</p>
+      <h2><i class="fas fa-unlock" style="color: var(--warning);"></i> Unlock Leakages</h2>
+      <p>Get unlimited access to all leakage papers</p>
       <div style="text-align: center; margin-bottom: 20px;">
         <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary);">KES 50</div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">Valid until 31 August 2026</div>
@@ -108,16 +108,16 @@
       WORKER_URL = config.workerUrl || '';
 
       const userData = userDoc.data();
-      if (userData && userData.vip) {
+      if (userData && (userData.vip || userData.leakages)) {
         document.getElementById('vip-active-notice').classList.remove('hidden');
         document.getElementById('vip-expiry').textContent = userData.vipExpiry ? formatDate(userData.vipExpiry) : '31 August 2026';
-        document.getElementById('join-btn').textContent = 'VIP Active';
+        document.getElementById('join-btn').textContent = 'Leakages Active';
         document.getElementById('join-btn').disabled = true;
         document.getElementById('join-btn').style.opacity = '0.7';
       }
     });
 
-    function openVipModal() {
+    function openLeakageModal() {
       document.getElementById('vip-modal').classList.add('active');
     }
 
@@ -144,7 +144,7 @@
 
         await db.collection('payments').add({
           uid: currentUser.uid,
-          type: 'vip',
+          type: 'leakages',
           amount: 50,
           phone: phone,
           externalReference: ref,
@@ -192,7 +192,7 @@
             if (data.status === 'completed') {
               unsub();
               closeModal();
-              showToast('VIP Activated! Welcome to Revision Hub VIP.', 'success');
+              showToast('Leakages Unlocked! Welcome.', 'success');
               setTimeout(() => window.location.reload(), 1500);
             } else if (data.status === 'failed') {
               unsub();

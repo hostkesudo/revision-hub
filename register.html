@@ -99,7 +99,7 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        window.location.href = '/premium.html';
+        window.location.href = '/vip.html';
       } catch (err) {
         let msg = 'Registration failed. Please try again.';
         if (err.code === 'auth/email-already-in-use') msg = 'An account with this email already exists.';

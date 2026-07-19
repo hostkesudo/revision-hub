@@ -25,9 +25,8 @@ function initNavbar(user) {
 
   if (user) {
     nav.innerHTML = `
-      <li><a href="/premium.html" class="${pageActive('premium')}"><i class="fas fa-star"></i> Leakages</a></li>
+      <li><a href="/vip.html" class="${pageActive('vip')}"><i class="fas fa-star"></i> Leakages</a></li>
       <li><a href="/papers.html" class="${pageActive('papers')}"><i class="fas fa-book"></i> Revision Notes</a></li>
-      <li><a href="/vip.html" class="${pageActive('vip')}"><i class="fas fa-crown"></i> VIP</a></li>
     `;
   } else {
     nav.innerHTML = `
@@ -75,7 +74,7 @@ async function requireAdmin(callback) {
     }
     const admin = await isAdmin(user);
     if (!admin) {
-      window.location.href = '/premium.html';
+      window.location.href = '/vip.html';
       return;
     }
     callback(user);
@@ -89,7 +88,7 @@ async function redirectIfAuth() {
       if (admin) {
         window.location.href = '/admin/dashboard.html';
       } else {
-        window.location.href = '/premium.html';
+        window.location.href = '/vip.html';
       }
     }
   });
