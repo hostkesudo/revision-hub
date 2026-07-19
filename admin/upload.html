@@ -62,13 +62,8 @@
           </div>
 
           <div class="form-group">
-            <label>File Name (used as title)</label>
-            <input type="text" id="title" class="form-control" placeholder="e.g. Networking Unit 1">
-          </div>
-
-          <div class="form-group">
             <label>Upload File</label>
-            <input type="file" id="file" class="form-control" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg" required style="padding: 10px;">
+            <input type="file" id="file" class="form-control" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg" multiple required style="padding: 10px;">
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="upload-btn">
@@ -86,6 +81,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/app.js"></script>
+  <script src="../js/security.js"></script>
   <script>
     initTheme();
     requireAdmin(() => {});
@@ -112,7 +108,7 @@
       const fileInput = document.getElementById('file');
 
       if (!fileInput.files.length) {
-        alertBox.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Please select a file.</div>';
+        alertBox.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Please select files.</div>';
         return;
       }
 
@@ -122,24 +118,27 @@
       alertBox.innerHTML = '';
 
       try {
-        const file = fileInput.files[0];
-        const filePath = `papers/${Date.now()}_${file.name}`;
-        const ref = storage.ref(filePath);
-        await ref.put(file);
-        const fileURL = await ref.getDownloadURL();
-
         const category = document.querySelector('input[name="type"]:checked').value;
-        let title = document.getElementById('title').value.trim();
-        if (!title) title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+        const files = Array.from(fileInput.files);
+        let uploaded = 0;
 
-        await db.collection('papers').add({
-          title, category, level: '4', subject: 'General', month: 'July/August 2026',
-          price: category === 'premium' ? 20 : 0,
-          fileURL, enabled: true,
-          uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        for (const file of files) {
+          const filePath = `papers/${Date.now()}_${file.name}`;
+          const ref = storage.ref(filePath);
+          await ref.put(file);
+          const fileURL = await ref.getDownloadURL();
+          const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
 
-        alertBox.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Uploaded successfully!</div>';
+          await db.collection('papers').add({
+            title, category, level: '4', subject: 'General', month: 'July/August 2026',
+            price: category === 'premium' ? 20 : 0,
+            fileURL, enabled: true,
+            uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          uploaded++;
+        }
+
+        alertBox.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> ${uploaded} file(s) uploaded successfully!</div>`;
         document.getElementById('upload-form').reset();
         document.querySelector('.type-option[data-value="revision"]').click();
       } catch (err) {
@@ -151,5 +150,6 @@
       }
     }
   </script>
+  <script src="../js/security.js"></script>
 </body>
 </html>
