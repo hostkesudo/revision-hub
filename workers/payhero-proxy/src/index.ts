@@ -143,6 +143,16 @@ async function updateFirestoreFromPayment(env: Env, ref: string, isSuccess: bool
 						vipExpiry: { timestampValue: new Date("2026-08-31").toISOString() },
 					});
 				}
+			} else if (type === "leakages") {
+				await frPatch(token, projectId, `payments/${encodeURIComponent(usedRef)}`, {
+					status: { stringValue: "completed" },
+				});
+				const userId = toStr(pf.uid);
+				if (userId) {
+					await frPatch(token, projectId, `users/${encodeURIComponent(userId)}`, {
+						leakages: { booleanValue: true },
+					});
+				}
 			} else if (type === "paper") {
 				await frPatch(token, projectId, `payments/${encodeURIComponent(usedRef)}`, {
 					status: { stringValue: "completed" },

@@ -25,9 +25,8 @@ function initNavbar(user) {
 
   if (user) {
     nav.innerHTML = `
-      <li><a href="/dashboard.html" class="${pageActive('dashboard')}"><i class="fas fa-home"></i> Dashboard</a></li>
-      <li><a href="/papers.html" class="${pageActive('papers')}"><i class="fas fa-book"></i> Revision Notes</a></li>
       <li><a href="/premium.html" class="${pageActive('premium')}"><i class="fas fa-star"></i> Leakages</a></li>
+      <li><a href="/papers.html" class="${pageActive('papers')}"><i class="fas fa-book"></i> Revision Notes</a></li>
       <li><a href="/vip.html" class="${pageActive('vip')}"><i class="fas fa-crown"></i> VIP</a></li>
     `;
   } else {
@@ -76,7 +75,7 @@ async function requireAdmin(callback) {
     }
     const admin = await isAdmin(user);
     if (!admin) {
-      window.location.href = '/dashboard.html';
+      window.location.href = '/premium.html';
       return;
     }
     callback(user);
@@ -90,7 +89,7 @@ async function redirectIfAuth() {
       if (admin) {
         window.location.href = '/admin/dashboard.html';
       } else {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/premium.html';
       }
     }
   });
