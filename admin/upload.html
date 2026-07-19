@@ -78,10 +78,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   <script src="../js/firebase-config.js"></script>
   <script src="../js/app.js"></script>
-  <script src="../js/security.js"></script>
   <script>
     initTheme();
     requireAdmin(() => {});
@@ -118,21 +116,31 @@
       alertBox.innerHTML = '';
 
       try {
+        const config = await getAppConfig();
+        const fileServerUrl = config.fileServerUrl;
+        const uploadToken = config.uploadToken;
         const category = document.querySelector('input[name="type"]:checked').value;
         const files = Array.from(fileInput.files);
         let uploaded = 0;
 
         for (const file of files) {
-          const filePath = `papers/${Date.now()}_${file.name}`;
-          const ref = storage.ref(filePath);
-          await ref.put(file);
-          const fileURL = await ref.getDownloadURL();
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const res = await fetch(`${fileServerUrl}/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${uploadToken}` },
+            body: formData
+          });
+
+          if (!res.ok) throw new Error(`Failed to upload ${file.name}`);
+          const { url } = await res.json();
           const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
 
           await db.collection('papers').add({
             title, category, level: '4', subject: 'General', month: 'July/August 2026',
             price: category === 'premium' ? 20 : 0,
-            fileURL, enabled: true,
+            fileURL: url, enabled: true,
             uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           uploaded++;
@@ -149,7 +157,6 @@
         spinner.classList.add('hidden');
       }
     }
-  </script>
   <script src="../js/security.js"></script>
 </body>
 </html>

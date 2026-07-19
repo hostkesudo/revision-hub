@@ -1,0 +1,10 @@
+name = "revisionhub-file-server"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+r2_buckets = [
+  { binding = "FILES", bucket_name = "revision-hub-files" }
+]
+
+[vars]
+ALLOWED_ORIGIN = "https://revision-hub-21h.pages.dev"
