@@ -1,5 +1,6 @@
 node_modules/
 workers/payhero-proxy/node_modules/
+workers/file-server/.upload_token
 service-account.json
 .vscode/
 .git/
